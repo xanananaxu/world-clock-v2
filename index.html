@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Horloge Mondiale — World Time</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream: #F0EBE1;
+  --warm-white: #FAF7F2;
+  --paper: #F5F0E8;
+  --ink: #1A1714;
+  --ink-soft: #3D3830;
+  --ink-faint: #8A8278;
+  --rule: #C0B8AC;
+  --rule-light: #DDD6CC;
+  --accent: #8B6F47;
+  --accent-warm: #C4935A;
+  --red: #A0392A;
+  --map-land: #D8D0C4;
+  --map-hover: #B8A898;
+  --map-t1: #6B4F35;
+  --map-t2: #9B7A56;
+  --map-t3: #C4A882;
+  --map-t4: #DDD0BE;
+  --map-ocean: #E8E3DA;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; min-height: 100vh; }
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: 'DM Mono', monospace;
+  overflow-x: hidden;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 999; opacity: 0.5;
+}
+
+/* ── MASTHEAD ── */
+.masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.6rem 3rem 1.2rem;
+  border-bottom: 1.5px solid var(--ink);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.masthead-title h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.masthead-title .sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  margin-top: 3px;
+  font-style: italic;
+}
+.masthead-right {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 300;
+  color: var(--ink-faint);
+  letter-spacing: 0.1em;
+  text-align: right;
+}
+#dstStatus {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent-warm);
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+/* ── HERO ── */
+.hero-time {
+  text-align: center;
+  padding: 2.2rem 3rem 2rem;
+  border-bottom: 0.5px solid var(--rule);
+  position: relative;
+}
+.hero-city {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0.4rem;
+  font-style: italic;
+}
+.hero-clock {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(4rem, 10vw, 7rem);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.hero-date-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2.5rem;
+  margin-top: 0.8rem;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.15em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  flex-wrap: wrap;
+}
+.hero-date-row .dot { color: var(--rule); margin: 0 -1rem; }
+
+/* ── CITY GRID ── */
+.city-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+.city-col {
+  border-right: 0.5px solid var(--rule);
+  padding: 1.6rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: background 0.2s;
+  position: relative;
+  cursor: default;
+}
+.city-col:last-child { border-right: none; }
+.city-col::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: transparent;
+  transition: background 0.25s;
+}
+.city-col:hover { background: var(--warm-white); }
+.city-col:hover::before { background: var(--ink); }
+.city-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.52rem;
+  font-weight: 300;
+  color: var(--rule);
+  letter-spacing: 0.05em;
+}
+.city-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--ink);
+}
+.city-region {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+.city-time {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.7rem;
+  font-weight: 400;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+  margin-top: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.city-date {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+}
+.city-utc {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.52rem;
+  font-weight: 300;
+  color: var(--rule);
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 0.5px solid var(--rule-light);
+}
+
+/* ── WORK BAND ── */
+.work-band {
+  border-top: 1.5px solid var(--ink);
+  padding: 1.6rem 3rem 1.4rem;
+  background: var(--warm-white);
+}
+.work-band-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.work-band-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.work-band-note {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+.work-rows { display: flex; flex-direction: column; }
+.work-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 140px;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.55rem 0;
+  border-bottom: 0.5px solid var(--rule-light);
+}
+.work-row:last-child { border-bottom: none; }
+.work-city-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+.work-bar-wrap {
+  position: relative;
+  height: 3px;
+  background: var(--rule-light);
+}
+.work-bar-fill {
+  position: absolute;
+  top: 0; height: 100%;
+  background: var(--ink);
+  transition: width 1s linear, left 1s linear;
+}
+.work-bar-now {
+  position: absolute;
+  top: -4px;
+  width: 2px; height: 11px;
+  background: var(--red);
+}
+.work-bj-time {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: var(--ink-soft);
+  text-align: right;
+  white-space: nowrap;
+}
+.cross-day {
+  color: var(--accent-warm);
+  font-size: 0.55rem;
+  margin-left: 4px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+}
+
+/* ── MAP SECTION ── */
+.map-section {
+  border-top: 1.5px solid var(--ink);
+  padding: 2rem 3rem;
+  background: var(--cream);
+}
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.4rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.map-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.map-legend {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+.legend-dot {
+  width: 8px; height: 8px;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.map-container {
+  position: relative;
+  width: 100%;
+  background: var(--map-ocean);
+  border: 0.5px solid var(--rule);
+  overflow: hidden;
+}
+.map-container svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Country paths */
+.country {
+  stroke: var(--warm-white);
+  stroke-width: 0.4;
+  transition: opacity 0.15s;
+  cursor: pointer;
+}
+.country:hover { opacity: 0.75; }
+.country.t1 { fill: var(--map-t1); }
+.country.t2 { fill: var(--map-t2); }
+.country.t3 { fill: var(--map-t3); }
+.country.t4 { fill: var(--map-t4); }
+.country.rest { fill: var(--map-land); }
+
+/* City dots on map */
+.city-dot {
+  fill: var(--ink);
+  stroke: var(--warm-white);
+  stroke-width: 0.8;
+  cursor: pointer;
+  transition: r 0.15s;
+}
+.city-dot:hover { fill: var(--red); }
+
+/* TOOLTIP */
+.map-tooltip {
+  position: absolute;
+  background: var(--ink);
+  color: var(--warm-white);
+  padding: 0.7rem 0.9rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 50;
+  min-width: 200px;
+  max-width: 260px;
+}
+.map-tooltip.visible { opacity: 1; }
+.tooltip-city {
+  font-family: 'DM Serif Display', serif;
+  font-size: 0.85rem;
+  color: var(--warm-white);
+  margin-bottom: 0.3rem;
+}
+.tooltip-time {
+  font-family: 'DM Mono', monospace;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--cream);
+  letter-spacing: 0.05em;
+}
+.tooltip-date {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.65rem;
+  color: #9A9490;
+  letter-spacing: 0.1em;
+  margin-top: 0.15rem;
+  font-style: italic;
+}
+.tooltip-work {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--accent-warm);
+  margin-top: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 0.5px solid #3A3530;
+  letter-spacing: 0.04em;
+}
+.tooltip-tier {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.58rem;
+  color: #6A6460;
+  margin-top: 0.2rem;
+  font-style: italic;
+  letter-spacing: 0.08em;
+}
+
+/* ── FOOTER ── */
+.footer-rule {
+  border-top: 0.5px solid var(--rule);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  padding: 0.8rem 3rem;
+  align-items: center;
+}
+.footer-left, .footer-right {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.5rem;
+  font-weight: 300;
+  color: var(--rule);
+  letter-spacing: 0.1em;
+}
+.footer-right { text-align: right; }
+.footer-center {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  text-align: center;
+  font-style: italic;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .masthead { padding: 1.2rem 1.5rem 1rem; }
+  .hero-time { padding: 1.6rem 1.5rem 1.4rem; }
+  .city-grid { grid-template-columns: repeat(3, 1fr); }
+  .city-col:nth-child(3) { border-right: none; }
+  .city-col { border-bottom: 0.5px solid var(--rule-light); padding: 1.2rem 1rem; }
+  .work-band { padding: 1.2rem 1.5rem; }
+  .work-row { grid-template-columns: 130px 1fr 110px; gap: 0.8rem; }
+  .map-section { padding: 1.5rem 1.5rem; }
+  .footer-rule { padding: 0.6rem 1.5rem; }
+}
+@media (max-width: 600px) {
+  .city-grid { grid-template-columns: repeat(2, 1fr); }
+  .city-col:nth-child(3) { border-right: 0.5px solid var(--rule); }
+  .city-col:nth-child(2) { border-right: none; }
+  .city-col:nth-child(4) { border-right: none; }
+  .hero-clock { font-size: clamp(3rem, 15vw, 4.5rem); }
+  .work-row { grid-template-columns: 110px 1fr auto; gap: 0.5rem; }
+  .map-section { padding: 1rem; }
+  .footer-rule { grid-template-columns: 1fr; gap: 0.2rem; padding: 0.6rem 1rem; }
+  .footer-center, .footer-right { text-align: left; }
+}
+</style>
+</head>
+<body>
+
+<!-- MASTHEAD -->
+<div class="masthead">
+  <div class="masthead-title">
+    <h1>Horloge Mondiale</h1>
+    <div class="sub">World Time Dashboard · Beijing Reference</div>
+  </div>
+  <div class="masthead-right">
+    <span id="dstStatus"></span>
+    <span id="dstLabel">DST Auto-sync Active</span>
+    <br>
+    <span id="mastheadUTC"></span>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero-time">
+  <div class="hero-city">Beijing · China Standard Time · UTC+8</div>
+  <div class="hero-clock" id="heroClock">00:00:00</div>
+  <div class="hero-date-row">
+    <span id="heroDay"></span>
+    <span class="dot">·</span>
+    <span id="heroDate"></span>
+    <span class="dot">·</span>
+    <span id="heroWeek"></span>
+  </div>
+</div>
+
+<!-- CITY GRID -->
+<div class="city-grid" id="cityGrid"></div>
+
+<!-- WORK HOURS -->
+<div class="work-band">
+  <div class="work-band-header">
+    <span class="work-band-title">Collaboration Window</span>
+    <span class="work-band-note">Local 09:00 – 17:00 → Beijing Time (DST auto-adjusted)</span>
+  </div>
+  <div class="work-rows" id="workRows"></div>
+</div>
+
+<!-- MAP -->
+<div class="map-section">
+  <div class="map-header">
+    <span class="map-title">Global Coverage Map</span>
+    <div class="map-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--map-t1)"></div>T1 — Primary</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--map-t2)"></div>T2 — Follow</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--map-t3)"></div>T3 — Opportunistic</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--map-t4)"></div>T4 — Long-term</div>
+    </div>
+  </div>
+  <div class="map-container" id="mapContainer">
+    <svg id="worldMap" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="map-tooltip" id="mapTooltip"></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer-rule">
+  <span class="footer-left" id="footerLeft"></span>
+  <span class="footer-center">Always on time — Toujours à l'heure</span>
+  <span class="footer-right">IANA Timezone Database · DST Auto-sync</span>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+const BJ_TZ = 'Asia/Shanghai';
+const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const GRID_CITIES = [
+  { id:'hk',  name:'Hong Kong',    sub:'SAR · China',    tz:'Asia/Hong_Kong',     n:'01' },
+  { id:'sg',  name:'Singapore',    sub:'City-State',     tz:'Asia/Singapore',      n:'02' },
+  { id:'lon', name:'London',       sub:'United Kingdom', tz:'Europe/London',       n:'03' },
+  { id:'ny',  name:'New York',     sub:'United States',  tz:'America/New_York',    n:'04' },
+  { id:'la',  name:'Los Angeles',  sub:'United States',  tz:'America/Los_Angeles', n:'05' },
+];
+
+const WORK_CITIES = [
+  { label:'China — Beijing',           tz:BJ_TZ,                  base:true },
+  { label:'United Kingdom — London',   tz:'Europe/London' },
+  { label:'USA — New York',            tz:'America/New_York' },
+  { label:'USA — Los Angeles',         tz:'America/Los_Angeles' },
+  { label:'Hong Kong — SAR',           tz:'Asia/Hong_Kong' },
+  { label:'Singapore',                 tz:'Asia/Singapore' },
+  { label:'Switzerland — Zurich',      tz:'Europe/Zurich' },
+  { label:'Netherlands — Amsterdam',   tz:'Europe/Amsterdam' },
+  { label:'Germany — Frankfurt',       tz:'Europe/Berlin' },
+  { label:'Australia — Sydney',        tz:'Australia/Sydney' },
+  { label:'Sweden — Stockholm',        tz:'Europe/Stockholm' },
+  { label:'Norway — Oslo',             tz:'Europe/Oslo' },
+  { label:'Japan — Tokyo',             tz:'Asia/Tokyo' },
+  { label:'Canada — Toronto',          tz:'America/Toronto' },
+  { label:'France — Paris',            tz:'Europe/Paris' },
+  { label:'South Korea — Seoul',       tz:'Asia/Seoul' },
+  { label:'UAE — Dubai',               tz:'Asia/Dubai' },
+  { label:'Saudi Arabia — Riyadh',     tz:'Asia/Riyadh' },
+];
+
+// Map countries: tier, timezone, display city, approx SVG coords (x,y on 1000x500)
+const MAP_COUNTRIES = [
+  // T1
+  { id:'gb',  name:'United Kingdom',  tier:'t1', tz:'Europe/London',       city:'London',          x:455, y:142, tierLabel:'T1 — Primary Market' },
+  { id:'us',  name:'United States',   tier:'t1', tz:'America/New_York',    city:'New York',        x:185, y:175, tierLabel:'T1 — Primary Market' },
+  { id:'hk',  name:'Hong Kong',       tier:'t1', tz:'Asia/Hong_Kong',      city:'Hong Kong',       x:775, y:220, tierLabel:'T1 — Primary Market' },
+  { id:'sg',  name:'Singapore',       tier:'t1', tz:'Asia/Singapore',      city:'Singapore',       x:760, y:278, tierLabel:'T1 — Primary Market' },
+  // T2
+  { id:'ch',  name:'Switzerland',     tier:'t2', tz:'Europe/Zurich',       city:'Zurich',          x:474, y:163, tierLabel:'T2 — Follow-up Market' },
+  { id:'nl',  name:'Netherlands',     tier:'t2', tz:'Europe/Amsterdam',    city:'Amsterdam',       x:466, y:148, tierLabel:'T2 — Follow-up Market' },
+  { id:'de',  name:'Germany',         tier:'t2', tz:'Europe/Berlin',       city:'Frankfurt',       x:474, y:155, tierLabel:'T2 — Follow-up Market' },
+  { id:'au',  name:'Australia',       tier:'t2', tz:'Australia/Sydney',    city:'Sydney',          x:840, y:370, tierLabel:'T2 — Follow-up Market' },
+  { id:'se',  name:'Sweden',          tier:'t2', tz:'Europe/Stockholm',    city:'Stockholm',       x:492, y:128, tierLabel:'T2 — Follow-up Market' },
+  { id:'no',  name:'Norway',          tier:'t2', tz:'Europe/Oslo',         city:'Oslo',            x:473, y:122, tierLabel:'T2 — Follow-up Market' },
+  // T3
+  { id:'jp',  name:'Japan',           tier:'t3', tz:'Asia/Tokyo',          city:'Tokyo',           x:828, y:178, tierLabel:'T3 — Opportunistic' },
+  { id:'ca',  name:'Canada',          tier:'t3', tz:'America/Toronto',     city:'Toronto',         x:180, y:145, tierLabel:'T3 — Opportunistic' },
+  { id:'fr',  name:'France',          tier:'t3', tz:'Europe/Paris',        city:'Paris',           x:459, y:162, tierLabel:'T3 — Opportunistic' },
+  { id:'kr',  name:'South Korea',     tier:'t3', tz:'Asia/Seoul',          city:'Seoul',           x:812, y:175, tierLabel:'T3 — Opportunistic' },
+  // T4
+  { id:'ae',  name:'UAE',             tier:'t4', tz:'Asia/Dubai',          city:'Dubai',           x:601, y:215, tierLabel:'T4 — Long-term / ADIA, Mubadala' },
+  { id:'sa',  name:'Saudi Arabia',    tier:'t4', tz:'Asia/Riyadh',         city:'Riyadh',          x:584, y:218, tierLabel:'T4 — Long-term / Sovereign Funds' },
+];
+
+// ═══════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function tzDate(tz, d = new Date()) {
+  return new Date(d.toLocaleString('en-US', { timeZone: tz }));
+}
+
+function fmtTime(d) {
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function fmtTimeShort(d) {
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function getUTCOffset(tz, now = new Date()) {
+  const local = tzDate(tz, now);
+  const utc   = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const diffMin = Math.round((local - utc) / 60000);
+  const sign = diffMin >= 0 ? '+' : '−';
+  const h = Math.floor(Math.abs(diffMin) / 60);
+  const m = Math.abs(diffMin) % 60;
+  return `UTC ${sign}${h}${m ? ':'+pad(m) : ''}`;
+}
+
+function getOffsetMinutes(tz, now = new Date()) {
+  const local = tzDate(tz, now);
+  const utc   = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+  return Math.round((local - utc) / 60000);
+}
+
+function getBeijingRange(tz, now = new Date()) {
+  // Get today's date in target timezone
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit' });
+  const parts = fmt.formatToParts(now);
+  let y, mo, d;
+  for (const p of parts) {
+    if (p.type === 'year')  y  = +p.value;
+    if (p.type === 'month') mo = +p.value;
+    if (p.type === 'day')   d  = +p.value;
+  }
+
+  // Get offset for target tz at this moment (handles DST correctly)
+  const offMin = getOffsetMinutes(tz, now);
+
+  // Local 09:00 in UTC
+  const local9UTC  = Date.UTC(y, mo-1, d, 9,  0, 0);
+  const local17UTC = Date.UTC(y, mo-1, d, 17, 0, 0);
+
+  // Convert to Beijing time
+  const bj9  = tzDate(BJ_TZ, new Date(local9UTC  - offMin * 60000));
+  const bj17 = tzDate(BJ_TZ, new Date(local17UTC - offMin * 60000));
+
+  const startMin = bj9.getHours()  * 60 + bj9.getMinutes();
+  const endMin   = bj17.getHours() * 60 + bj17.getMinutes();
+  const cross    = bj17 < bj9 || (bj17.getDate() !== bj9.getDate());
+
+  return {
+    start: fmtTimeShort(bj9),
+    end:   fmtTimeShort(bj17),
+    startMin, endMin, cross
+  };
+}
+
+function isDSTActive(tz, now = new Date()) {
+  // Compare offset to January (standard) and July (summer)
+  const jan = getOffsetMinutes(tz, new Date(now.getFullYear(), 0, 15));
+  const jul = getOffsetMinutes(tz, new Date(now.getFullYear(), 6, 15));
+  const current = getOffsetMinutes(tz, now);
+  // If offsets differ and current = summer offset, DST is active
+  return jan !== jul && current === Math.max(jan, jul);
+}
+
+// ═══════════════════════════════════════════════
+// BUILD DOM
+// ═══════════════════════════════════════════════
+function buildCityGrid() {
+  const grid = document.getElementById('cityGrid');
+  grid.innerHTML = GRID_CITIES.map(c => `
+    <div class="city-col">
+      <div class="city-num">${c.n}</div>
+      <div class="city-name">${c.name}</div>
+      <div class="city-region">${c.sub}</div>
+      <div class="city-time" id="ct-${c.id}">--:--:--</div>
+      <div class="city-date" id="cd-${c.id}"></div>
+      <div class="city-utc"  id="cu-${c.id}"></div>
+    </div>
+  `).join('');
+}
+
+function buildWorkRows() {
+  const wr = document.getElementById('workRows');
+  wr.innerHTML = WORK_CITIES.map((r, i) => `
+    <div class="work-row">
+      <span class="work-city-label">${r.label}</span>
+      <div class="work-bar-wrap">
+        <div class="work-bar-fill" id="wbf-${i}"></div>
+        <div class="work-bar-now"  id="wbn-${i}"></div>
+      </div>
+      <span class="work-bj-time" id="wbt-${i}"></span>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════
+// WORLD MAP (Simplified SVG paths — Natural Earth)
+// ═══════════════════════════════════════════════
+function buildMap() {
+  const svg = document.getElementById('worldMap');
+
+  // Simplified world land mass using Natural Earth projection mapped to 1000x500
+  // Key country paths (simplified polygons for visual representation)
+  const countryPaths = {
+    // North America
+    ca: 'M120,60 L280,60 L290,90 L270,110 L280,130 L250,140 L240,125 L220,130 L210,155 L195,150 L185,140 L170,148 L160,135 L145,140 L130,130 L115,110 L110,90 Z',
+    us: 'M130,148 L165,148 L180,138 L200,150 L215,158 L230,150 L250,155 L265,145 L280,150 L285,170 L275,185 L270,195 L250,200 L230,205 L210,200 L195,205 L175,198 L160,205 L145,200 L135,185 L128,170 Z',
+    mx: 'M130,200 L165,200 L175,215 L168,230 L155,240 L145,235 L138,220 L128,212 Z',
+
+    // South America
+    br: 'M230,255 L280,248 L310,260 L320,280 L310,310 L295,330 L275,345 L255,340 L240,320 L228,300 L222,275 Z',
+    ar: 'M245,340 L268,340 L275,360 L268,380 L255,390 L242,380 L238,360 Z',
+    co: 'M210,255 L232,250 L236,270 L220,275 L210,268 Z',
+    cl: 'M242,340 L255,340 L258,360 L252,390 L238,390 L236,370 Z',
+
+    // Europe
+    gb: 'M440,135 L450,130 L456,140 L452,152 L444,155 L438,148 L438,138 Z',
+    ie: 'M432,142 L440,138 L440,150 L432,152 Z',
+    fr: 'M450,155 L472,152 L476,165 L465,175 L454,172 L448,162 Z',
+    es: 'M440,172 L468,170 L472,185 L460,192 L444,188 L438,178 Z',
+    pt: 'M436,172 L443,172 L442,188 L436,186 Z',
+    de: 'M468,145 L488,142 L490,158 L480,165 L468,162 L465,150 Z',
+    nl: 'M462,138 L474,136 L476,148 L464,150 Z',
+    be: 'M461,150 L472,148 L474,158 L462,160 Z',
+    ch: 'M468,162 L482,160 L484,170 L470,172 Z',
+    at: 'M482,158 L500,156 L502,166 L484,168 Z',
+    it: 'M470,172 L486,168 L492,185 L485,200 L475,202 L468,192 L466,178 Z',
+    se: 'M478,100 L492,95 L498,115 L492,130 L480,132 L476,115 Z',
+    no: 'M462,90 L480,85 L484,100 L478,115 L465,118 L458,102 Z',
+    dk: 'M474,130 L482,128 L484,138 L476,140 Z',
+    fi: 'M490,95 L510,90 L514,110 L504,125 L492,122 L488,108 Z',
+    pl: 'M488,140 L510,138 L512,155 L492,158 Z',
+    ru_eu: 'M510,95 L580,88 L590,120 L575,140 L555,148 L530,145 L512,130 L508,110 Z',
+
+    // Russia (Asia)
+    ru: 'M560,80 L760,60 L800,85 L810,110 L790,130 L760,128 L720,125 L680,130 L640,125 L600,130 L570,125 L558,110 Z',
+
+    // Middle East / Central Asia
+    tr: 'M510,175 L548,172 L552,185 L540,192 L515,190 L508,182 Z',
+    sa: 'M552,205 L592,200 L598,225 L585,240 L562,240 L548,225 L548,212 Z',
+    ir: 'M570,180 L608,178 L612,200 L596,210 L572,208 L565,195 Z',
+    iq: 'M548,180 L572,178 L572,200 L548,205 Z',
+    ae: 'M588,218 L610,215 L612,228 L590,230 Z',
+    il: 'M524,188 L530,186 L532,198 L525,200 Z',
+
+    // Africa
+    eg: 'M512,190 L540,188 L542,208 L515,210 Z',
+    ly: 'M475,195 L513,192 L515,215 L478,218 Z',
+    dz: 'M444,192 L476,190 L478,222 L446,225 Z',
+    ma: 'M436,192 L446,190 L448,210 L438,214 Z',
+    ng: 'M460,248 L490,245 L492,268 L462,272 Z',
+    za: 'M480,340 L510,335 L515,362 L500,375 L482,368 L476,350 Z',
+    ke: 'M520,270 L545,266 L548,290 L522,295 Z',
+    et: 'M510,255 L540,250 L544,270 L512,275 Z',
+
+    // South Asia
+    in: 'M620,195 L670,190 L678,220 L670,250 L648,265 L628,260 L615,240 L612,215 Z',
+    pk: 'M595,188 L625,185 L628,205 L612,215 L595,210 Z',
+    bd: 'M668,215 L682,212 L685,228 L670,232 Z',
+
+    // Southeast Asia
+    th: 'M718,230 L740,225 L744,250 L732,265 L718,260 L714,245 Z',
+    vn: 'M738,225 L755,220 L760,248 L745,258 L736,248 Z',
+    my: 'M730,262 L765,258 L768,272 L745,278 L728,274 Z',
+    id: 'M738,278 L800,272 L810,290 L798,300 L762,298 L736,292 Z',
+    ph: 'M780,228 L800,222 L808,248 L795,258 L778,252 Z',
+
+    // East Asia
+    cn: 'M655,155 L760,148 L775,175 L770,210 L745,225 L718,228 L688,222 L660,215 L645,195 L645,172 Z',
+    kr: 'M800,172 L820,168 L825,185 L808,192 L798,185 Z',
+    jp: 'M818,155 L840,148 L850,165 L840,185 L822,188 L812,175 Z',
+    mn: 'M660,138 L748,132 L752,155 L665,158 Z',
+
+    // Oceania
+    au: 'M780,320 L870,315 L885,345 L875,380 L845,400 L808,398 L785,375 L775,345 Z',
+    nz: 'M890,370 L906,360 L912,382 L900,395 L887,388 Z',
+
+    // Central America / Caribbean
+    cu: 'M195,215 L220,210 L225,222 L200,226 Z',
+
+    // Nordic islands
+    is: 'M415,108 L435,105 L438,118 L418,120 Z',
+  };
+
+  const tierMap = {
+    gb:'t1', us:'t1', hk:'t1', sg:'t1',
+    ch:'t2', nl:'t2', de:'t2', au:'t2', se:'t2', no:'t2',
+    jp:'t3', ca:'t3', fr:'t3', kr:'t3',
+    ae:'t4', sa:'t4',
+  };
+
+  // Build SVG - ocean background + land paths
+  let svgContent = `<rect width="1000" height="500" fill="var(--map-ocean)"/>`;
+
+  // Draw all country paths
+  for (const [id, path] of Object.entries(countryPaths)) {
+    const tier = tierMap[id] || 'rest';
+    const mapCountry = MAP_COUNTRIES.find(c => c.id === id);
+    const hasData = !!mapCountry;
+    svgContent += `<path class="country ${tier}" d="${path}" data-id="${id}" ${hasData ? 'data-has-info="true"' : ''}/>`;
+  }
+
+  // City dots for tracked markets
+  for (const c of MAP_COUNTRIES) {
+    svgContent += `<circle class="city-dot" cx="${c.x}" cy="${c.y}" r="3.5" data-id="${c.id}"/>`;
+  }
+
+  svg.innerHTML = svgContent;
+
+  // Tooltip interaction
+  const tooltip = document.getElementById('mapTooltip');
+  const container = document.getElementById('mapContainer');
+
+  function showTooltip(e, countryId) {
+    const country = MAP_COUNTRIES.find(c => c.id === countryId);
+    if (!country) return;
+
+    const now = new Date();
+    const d = tzDate(country.tz, now);
+    const utcOff = getUTCOffset(country.tz, now);
+    const range = getBeijingRange(country.tz, now);
+    const crossHtml = range.cross ? ' <span style="color:#C4935A;font-style:italic">+1d</span>' : '';
+
+    tooltip.innerHTML = `
+      <div class="tooltip-city">${country.name} — ${country.city}</div>
+      <div class="tooltip-time">${fmtTime(d)}</div>
+      <div class="tooltip-date">${WEEKDAYS[d.getDay()]} · ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()} · ${utcOff}</div>
+      <div class="tooltip-work">09:00–17:00 local = ${range.start}–${range.end} Beijing${range.cross ? ' +1d' : ''}</div>
+      <div class="tooltip-tier">${country.tierLabel}</div>
+    `;
+
+    const rect = container.getBoundingClientRect();
+    let tx = e.clientX - rect.left + 12;
+    let ty = e.clientY - rect.top - 10;
+
+    // Keep in bounds
+    const tw = 240;
+    if (tx + tw > rect.width) tx = e.clientX - rect.left - tw - 12;
+    if (ty < 0) ty = 0;
+
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top  = ty + 'px';
+    tooltip.classList.add('visible');
+  }
+
+  function hideTooltip() {
+    tooltip.classList.remove('visible');
+  }
+
+  // Attach events to paths and dots
+  svg.addEventListener('mousemove', e => {
+    const el = e.target;
+    if (el.dataset.id) {
+      showTooltip(e, el.dataset.id);
+    } else {
+      hideTooltip();
+    }
+  });
+  svg.addEventListener('mouseleave', hideTooltip);
+
+  // Touch support
+  svg.addEventListener('click', e => {
+    const el = e.target;
+    if (el.dataset.id) showTooltip(e, el.dataset.id);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// TICK — runs every second
+// ═══════════════════════════════════════════════
+function tick() {
+  const now = new Date();
+  const bj  = tzDate(BJ_TZ, now);
+
+  // Hero
+  document.getElementById('heroClock').textContent = fmtTime(bj);
+  document.getElementById('heroDay').textContent   = WEEKDAYS[bj.getDay()];
+  document.getElementById('heroDate').textContent  = `${bj.getDate()} ${MONTHS[bj.getMonth()]} ${bj.getFullYear()}`;
+  document.getElementById('heroWeek').textContent  = getUTCOffset(BJ_TZ, now);
+
+  // Masthead
+  const nyDST = isDSTActive('America/New_York', now);
+  const lonDST = isDSTActive('Europe/London', now);
+  const anyDST = nyDST || lonDST;
+  document.getElementById('dstLabel').textContent = anyDST ? 'DST Active — Summer Hours' : 'Standard Time — Winter Hours';
+  document.getElementById('mastheadUTC').textContent = `Beijing ${getUTCOffset(BJ_TZ, now)}`;
+  document.getElementById('footerLeft').textContent = `${bj.getDate()} ${MONTHS_SHORT[bj.getMonth()]} ${bj.getFullYear()}`;
+
+  // City grid
+  for (const c of GRID_CITIES) {
+    const d = tzDate(c.tz, now);
+    const ct = document.getElementById(`ct-${c.id}`);
+    const cd = document.getElementById(`cd-${c.id}`);
+    const cu = document.getElementById(`cu-${c.id}`);
+    if (ct) ct.textContent = fmtTime(d);
+    if (cd) cd.textContent = `${WEEKDAYS[d.getDay()]} · ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
+    if (cu) cu.textContent = getUTCOffset(c.tz, now) + (isDSTActive(c.tz, now) ? ' · DST' : '');
+  }
+
+  // Work bars
+  const bjNow = tzDate(BJ_TZ, now);
+  const bjMinNow = bjNow.getHours() * 60 + bjNow.getMinutes();
+  const dayMin = 24 * 60;
+
+  WORK_CITIES.forEach((r, i) => {
+    let startMin, endMin, labelText, cross;
+    if (r.base) {
+      startMin = 9 * 60; endMin = 17 * 60; cross = false;
+      labelText = '09:00 — 17:00';
+    } else {
+      const range = getBeijingRange(r.tz, now);
+      startMin = range.startMin; endMin = range.endMin; cross = range.cross;
+      labelText = `${range.start} — ${range.end}`;
+    }
+
+    const fill   = document.getElementById(`wbf-${i}`);
+    const marker = document.getElementById(`wbn-${i}`);
+    const label  = document.getElementById(`wbt-${i}`);
+    if (!fill || !marker || !label) return;
+
+    const leftPct  = (startMin / dayMin * 100).toFixed(2);
+    let widthMin = endMin - startMin;
+    if (cross) widthMin += dayMin;
+    const widthPct = Math.min(widthMin / dayMin * 100, 100 - +leftPct).toFixed(2);
+
+    fill.style.left  = leftPct + '%';
+    fill.style.width = widthPct + '%';
+    marker.style.left = (bjMinNow / dayMin * 100).toFixed(2) + '%';
+
+    label.innerHTML = labelText + (cross ? '<span class="cross-day">+1d</span>' : '');
+  });
+}
+
+// ═══════════════════════════════════════════════
+// TOOLTIP TIME — refresh map tooltip if visible
+// ═══════════════════════════════════════════════
+let tooltipInterval = null;
+function startTooltipRefresh() {
+  tooltipInterval = setInterval(() => {
+    const tooltip = document.getElementById('mapTooltip');
+    if (tooltip && tooltip.classList.contains('visible')) {
+      // tooltip will be refreshed by next mousemove
+    }
+  }, 1000);
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+buildCityGrid();
+buildWorkRows();
+buildMap();
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
